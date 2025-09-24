@@ -2,7 +2,7 @@
 
 ## Table of Contents
 1. [Introduction](#introduction)  
-2. [Project Description](#project-description)  
+2. [Description of the Project](#description-of-the-project)  
    - [Objective](#objective)  
    - [Problem Statement](#problem-statement)  
    - [Scope](#scope)  
@@ -20,7 +20,7 @@
    - [Issues and Debugging](#issues-and-debugging)  
 6. [Conclusion and Future Work](#conclusion-and-future-work)  
 7. [References](#references)  
-8. [Appendix (if-needed)](#appendix-if-needed)  
+8. [Appendix (if-needed)](#appendix-if-needed)
 
 ---
 
