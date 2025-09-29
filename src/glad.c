@@ -35,7 +35,6 @@ static HMODULE libGL;
 
 typedef void* (APIENTRYP PFNWGLGETPROCADDRESSPROC_PRIVATE)(const char*);
 static PFNWGLGETPROCADDRESSPROC_PRIVATE gladGetProcAddressPtr;
-
 #ifdef _MSC_VER
 #ifdef __has_include
   #if __has_include(<winapifamily.h>)
