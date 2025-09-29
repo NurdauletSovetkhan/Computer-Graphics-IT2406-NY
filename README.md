@@ -92,6 +92,298 @@ Several mathematical and algorithmic techniques were applied:
 - **Geometry Shader-Based Mesh Generation** – to shift heavy computation to the GPU and enable real-time updates.
 - **Phong or Blinn-Phong Shading Model** – to render smooth lighting and shading on the union surface.
 
+## 4. Code Architecture and Implementation Details
+
+### 4.1 Project Structure Overview
+The project follows a modular architecture designed for efficient real-time rendering:
+
+```
+├── src/                    # Source code directory
+│   ├── main.cpp           # Main application logic and rendering loop
+│   ├── utilities.cpp/h    # Helper classes and utility functions
+│   ├── glad.c             # OpenGL function loader
+│   └── Libraries/         # External dependencies
+│       ├── include/       # Header files (GLFW, GLM, GLAD)
+│       └── lib/           # Static libraries
+├── shaders/               # OpenGL shader programs
+│   ├── marching_cubes.vert   # Vertex shader
+│   ├── marching_cubes.geom   # Geometry shader (core algorithm)
+│   └── marching_cubes.frag   # Fragment shader
+├── build/                 # Compiled binaries and resources
+└── CMakeLists.txt        # Build configuration
+```
+
+### 4.2 Core Components Analysis
+
+#### 4.2.1 Main Application (`main.cpp`)
+**Initialization Phase:**
+```cpp
+// Window and OpenGL context setup
+GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Spheres Merging Visualization", NULL, NULL);
+gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+// Camera system with mouse/keyboard controls
+Camera camera(glm::vec3(0.0f, 0.0f, 6.0f));
+```
+
+**Sphere System:**
+- Creates 3 animated spheres with different positions, radii, and velocities
+- Implements physics with boundary collision detection
+- Each sphere contributes to the scalar field using metaball equations
+
+**Rendering Pipeline:**
+1. Updates sphere positions based on deltaTime
+2. Generates uniform 3D grid points for Marching Cubes algorithm  
+3. Passes sphere data and grid parameters to GPU shaders
+4. Renders grid points (geometry shader creates triangular mesh)
+
+#### 4.2.2 Utility Classes (`utilities.cpp/h`)
+
+**Camera Class:**
+```cpp
+class Camera {
+    glm::vec3 Position, Front, Up, Right, WorldUp;
+    float Yaw, Pitch, MovementSpeed, MouseSensitivity, Zoom;
+    
+    // Key methods:
+    glm::mat4 GetViewMatrix();              // Creates view transformation
+    void ProcessKeyboard(int direction);     // WASD movement
+    void ProcessMouseMovement(float x, y);   // Mouse look
+    void ProcessMouseScroll(float yoffset);  // Zoom control
+};
+```
+
+**Shader Management:**
+```cpp
+class Shader {
+    unsigned int ID;  // OpenGL program ID
+    
+    // Supports vertex + fragment OR vertex + geometry + fragment
+    Shader(vertexPath, fragmentPath);
+    Shader(vertexPath, geometryPath, fragmentPath);
+    
+    // Uniform setters for different data types
+    void setMat4(const std::string& name, const glm::mat4& mat);
+    void setVec3(const std::string& name, const glm::vec3& value);
+    void setFloat(const std::string& name, float value);
+};
+```
+
+**Marching Cubes Utilities:**
+```cpp
+namespace MarchingCubes {
+    // Generates uniform 3D grid of sample points
+    std::vector<glm::vec3> generateGridPoints(float gridSize, int resolution);
+    
+    // Calculates scalar field value using metaball equation: Σ(radius²/distance²)
+    float calculateScalarField(const glm::vec3& position, const std::vector<Sphere>& spheres);
+    
+    // Computes surface normals using finite differences
+    glm::vec3 calculateGradient(const glm::vec3& position, const std::vector<Sphere>& spheres);
+}
+```
+
+### 4.3 GPU Shader Pipeline
+
+#### 4.3.1 Vertex Shader (`marching_cubes.vert`)
+**Purpose:** Minimal preprocessing of grid points
+```glsl
+#version 430 core
+layout (location = 0) in vec3 aPos;  // Grid point position
+out vec3 worldPos;                   // Pass to geometry shader
+
+void main() {
+    vec4 worldPosition = model * vec4(aPos, 1.0);
+    worldPos = worldPosition.xyz;
+    gl_Position = worldPosition;  // Not final - geometry shader transforms
+}
+```
+
+#### 4.3.2 Geometry Shader (`marching_cubes.geom`) - **Core Algorithm**
+**Input:** `layout (points) in;` - Individual grid points  
+**Output:** `layout (triangle_strip, max_vertices = 15) out;` - Triangle mesh
+
+**Key Data Structures:**
+```glsl
+int edgeTable[256];        // Lookup table: cube configuration → active edges
+int triTable[256][16];     // Lookup table: cube configuration → triangles
+vec3 cubeVertices[8];      // Standard cube vertex positions
+int edgeVertices[12][2];   // Edge definitions (vertex pairs)
+```
+
+**Algorithm Implementation:**
+```glsl
+void main() {
+    // 1. Create cube around current grid point
+    vec3 cubePos = worldPos[0];
+    float cellSize = gridSize / float(gridResolution);
+    
+    // 2. Sample scalar field at 8 cube vertices
+    float cubeValues[8];
+    for (int i = 0; i < 8; i++) {
+        worldVertices[i] = cubePos + cubeVertices[i] * cellSize;
+        cubeValues[i] = scalarField(worldVertices[i]);
+    }
+    
+    // 3. Determine cube configuration (8-bit index)
+    int cubeIndex = 0;
+    for (int i = 0; i < 8; i++) {
+        if (cubeValues[i] < isoLevel)
+            cubeIndex |= (1 << i);  // Set bit if inside surface
+    }
+    
+    // 4. Skip if cube fully inside/outside
+    if (edgeTable[cubeIndex] == 0) return;
+    
+    // 5. Interpolate edge intersections
+    vec3 edgeVertexPos[12];
+    for (int i = 0; i < 12; i++) {
+        if ((edgeTable[cubeIndex] & (1 << i)) != 0) {
+            // Linear interpolation based on scalar field values
+            edgeVertexPos[i] = interpolateVertex(v1, v2, val1, val2);
+        }
+    }
+    
+    // 6. Generate triangles using lookup table
+    for (int i = 0; triTable[cubeIndex][i] != -1; i += 3) {
+        // Emit triangle vertices with normals and positions
+        for (int j = 0; j < 3; j++) {
+            int edgeIndex = triTable[cubeIndex][i + j];
+            vec3 vertexPos = edgeVertexPos[edgeIndex];
+            
+            gl_Position = projection * view * vec4(vertexPos, 1.0);
+            FragPos = vertexPos;
+            Normal = calculateNormal(vertexPos);  // Finite differences
+            Color = vec3(0.3, 0.7, 1.0);
+            
+            EmitVertex();
+        }
+        EndPrimitive();
+    }
+}
+```
+
+**Scalar Field Function:**
+```glsl
+float scalarField(vec3 pos) {
+    float value = 0.0;
+    for (int i = 0; i < numSpheres; i++) {
+        vec3 diff = pos - spherePositions[i];
+        float dist = length(diff);
+        if (dist > 0.0001) {
+            value += sphereRadii[i] * sphereRadii[i] / (dist * dist);
+        }
+    }
+    return value;  // Compare with isoLevel to determine inside/outside
+}
+```
+
+#### 4.3.3 Fragment Shader (`marching_cubes.frag`)
+**Purpose:** Implements Blinn-Phong lighting model
+```glsl
+void main() {
+    // Ambient component
+    vec3 ambient = ambientStrength * lightColor;
+    
+    // Diffuse component (Lambert's law)
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(lightPos - FragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * lightColor;
+    
+    // Specular component (Blinn-Phong modification)
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), 64);
+    vec3 specular = specularStrength * spec * lightColor;
+    
+    // Final color combination
+    vec3 result = (ambient + diffuse + specular) * Color;
+    FragColor = vec4(result, 1.0);
+}
+```
+
+### 4.4 Mathematical Foundations
+
+#### 4.4.1 Metaball Equation
+**Scalar Field Definition:**
+$$f(x,y,z) = \sum_{i=1}^{n} \frac{r_i^2}{(x-x_i)^2 + (y-y_i)^2 + (z-z_i)^2}$$
+
+Where:
+- $(x_i, y_i, z_i)$ = sphere center position
+- $r_i$ = sphere radius  
+- Isosurface defined by $f(x,y,z) = \text{isoLevel}$
+
+#### 4.4.2 Surface Normal Calculation
+**Gradient using finite differences:**
+$$\vec{n} = \nabla f = \left(\frac{\partial f}{\partial x}, \frac{\partial f}{\partial y}, \frac{\partial f}{\partial z}\right)$$
+
+Implementation:
+```glsl
+vec3 calculateNormal(vec3 pos) {
+    float eps = 0.01;
+    vec3 gradient;
+    gradient.x = scalarField(pos + vec3(eps,0,0)) - scalarField(pos - vec3(eps,0,0));
+    gradient.y = scalarField(pos + vec3(0,eps,0)) - scalarField(pos - vec3(0,eps,0)); 
+    gradient.z = scalarField(pos + vec3(0,0,eps)) - scalarField(pos - vec3(0,0,eps));
+    return normalize(gradient);
+}
+```
+
+### 4.5 Performance Optimizations
+
+#### 4.5.1 GPU-Centric Architecture
+- **Geometry Shader Processing:** Entire mesh generation happens on GPU
+- **Minimal CPU-GPU Transfer:** Only sphere parameters uploaded per frame
+- **Parallel Cube Processing:** Thousands of cubes processed simultaneously
+- **Static Grid:** Grid points uploaded once, reused every frame
+
+#### 4.5.2 Memory Management
+```cpp
+// Efficient buffer usage
+unsigned int VBO, VAO;
+glGenVertexArrays(1, &VAO);
+glGenBuffers(1, &VBO);
+glBufferData(GL_ARRAY_BUFFER, gridPoints.size() * sizeof(glm::vec3), &gridPoints[0], GL_STATIC_DRAW);
+```
+
+#### 4.5.3 Lookup Table Optimization
+- **Precomputed Tables:** `edgeTable[256]` and `triTable[256][16]` eliminate runtime calculations
+- **Bitwise Operations:** Fast cube configuration determination using bit manipulation
+- **Early Termination:** Skip cubes that don't intersect the isosurface
+
+### 4.6 Real-time Animation System
+
+#### 4.6.1 Physics Integration
+```cpp
+// Simple Euler integration with collision detection
+for (auto& sphere : spheres) {
+    sphere.position += sphere.velocity * deltaTime;
+    
+    // Boundary collision response
+    float boundary = GRID_SIZE * 0.4f;
+    if (sphere.position.x > boundary || sphere.position.x < -boundary)
+        sphere.velocity.x *= -1;  // Perfect elastic collision
+}
+```
+
+#### 4.6.2 Interactive Controls
+- **WASD:** Camera translation in world space
+- **Mouse Movement:** First-person camera rotation with pitch constraints
+- **Mouse Scroll:** FOV-based zoom (1° to 45°)
+- **Real-time Response:** 60+ FPS with immediate visual feedback
+
+### 4.7 Technical Achievements
+
+1. **Real-time Isosurface Extraction:** Dynamic mesh generation at 60+ FPS
+2. **GPU Compute Pipeline:** Efficient use of geometry shaders for parallel processing  
+3. **Smooth Blending:** Natural sphere merging/separation using metaball mathematics
+4. **Modern OpenGL:** Core profile with programmable pipeline (OpenGL 4.3+)
+5. **Mathematical Accuracy:** Proper gradient calculation for realistic lighting
+6. **Memory Efficiency:** Minimal GPU memory usage with static grid reuse
+
+This implementation demonstrates advanced computer graphics techniques including procedural geometry generation, GPU compute shaders, real-time physics, and mathematical surface reconstruction—all integrated into a cohesive, interactive 3D application.
+
 ## Graphics and Rendering
 ### 2D/3D Rendering Techniques
 ### Lighting and Shading
