@@ -1,7 +1,10 @@
 # Makefile for Spheres Merging Visualization Project
-# Компилятор и флаги
+# Определение операционной системы
+UNAME_S := $(shell uname -s)
+
+# Компилятор и базовые флаги
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -Wno-unused-parameter
 DEBUGFLAGS = -g -DDEBUG
 
 # Директории
@@ -13,15 +16,36 @@ LIB_DIR = $(SRC_DIR)/Libraries
 # Пути к заголовочным файлам
 INCLUDES = -I$(LIB_DIR)/include -I$(SRC_DIR)
 
-# Библиотеки для линковки
-LIBS = -L$(LIB_DIR)/lib -lglfw3 -lopengl32 -lgdi32 -luser32
+# Определение библиотек в зависимости от ОС
+ifeq ($(UNAME_S),Linux)
+    # Linux настройки
+    LIBS = -lglfw -lGL -lGLU -ldl -lpthread -lX11 -lXrandr -lXinerama -lXcursor -lm
+    TARGET_EXT = 
+    COPY_CMD = cp
+    MKDIR_CMD = mkdir -p
+    RM_CMD = rm -rf
+else ifeq ($(UNAME_S),Darwin)
+    # macOS настройки
+    LIBS = -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+    TARGET_EXT = 
+    COPY_CMD = cp
+    MKDIR_CMD = mkdir -p
+    RM_CMD = rm -rf
+else
+    # Windows настройки (MinGW/MSYS2)
+    LIBS = -L$(LIB_DIR)/lib -lglfw3 -lopengl32 -lgdi32 -luser32
+    TARGET_EXT = .exe
+    COPY_CMD = copy
+    MKDIR_CMD = mkdir
+    RM_CMD = rmdir /s /q
+endif
 
 # Исходные файлы
 SOURCES = $(SRC_DIR)/main.cpp $(SRC_DIR)/utilities.cpp $(SRC_DIR)/glad.c
 OBJECTS = $(BUILD_DIR)/main.o $(BUILD_DIR)/utilities.o $(BUILD_DIR)/glad.o
 
 # Целевой исполняемый файл
-TARGET = $(BUILD_DIR)/final-project.exe
+TARGET = $(BUILD_DIR)/final-project$(TARGET_EXT)
 
 # Шейдеры для копирования
 SHADERS = $(SHADER_DIR)/marching_cubes.vert $(SHADER_DIR)/marching_cubes.geom $(SHADER_DIR)/marching_cubes.frag
@@ -48,8 +72,8 @@ $(TARGET): $(BUILD_DIR) $(OBJECTS)
 # Создание директории сборки
 $(BUILD_DIR):
 	@echo "Creating build directory..."
-	@if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
-	@if not exist "$(BUILD_DIR)\shaders" mkdir "$(BUILD_DIR)\shaders"
+	@$(MKDIR_CMD) $(BUILD_DIR) 2>/dev/null || true
+	@$(MKDIR_CMD) $(BUILD_DIR)/shaders 2>/dev/null || true
 
 # Компиляция main.cpp
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.cpp $(SRC_DIR)/utilities.h
@@ -69,28 +93,28 @@ $(BUILD_DIR)/glad.o: $(SRC_DIR)/glad.c
 # Копирование шейдеров
 copy-shaders: $(BUILD_DIR)
 	@echo "Copying shaders..."
-	@copy "$(SHADER_DIR)\marching_cubes.vert" "$(BUILD_DIR)\shaders\" > nul 2>&1
-	@copy "$(SHADER_DIR)\marching_cubes.geom" "$(BUILD_DIR)\shaders\" > nul 2>&1
-	@copy "$(SHADER_DIR)\marching_cubes.frag" "$(BUILD_DIR)\shaders\" > nul 2>&1
+	@$(COPY_CMD) $(SHADER_DIR)/marching_cubes.vert $(BUILD_DIR)/shaders/ 2>/dev/null || true
+	@$(COPY_CMD) $(SHADER_DIR)/marching_cubes.geom $(BUILD_DIR)/shaders/ 2>/dev/null || true
+	@$(COPY_CMD) $(SHADER_DIR)/marching_cubes.frag $(BUILD_DIR)/shaders/ 2>/dev/null || true
 	@echo "Shaders copied successfully!"
 
 # Запуск программы
 run: $(TARGET)
 	@echo "Running application..."
-	@cd $(BUILD_DIR) && final-project.exe
+	@cd $(BUILD_DIR) && ./final-project$(TARGET_EXT)
 
 # Очистка файлов сборки
 clean:
 	@echo "Cleaning build files..."
-	@if exist "$(BUILD_DIR)\*.o" del /q "$(BUILD_DIR)\*.o"
-	@if exist "$(BUILD_DIR)\*.exe" del /q "$(BUILD_DIR)\*.exe"
-	@if exist "$(BUILD_DIR)\shaders" rmdir /s /q "$(BUILD_DIR)\shaders"
+	@$(RM_CMD) $(BUILD_DIR)/*.o 2>/dev/null || true
+	@$(RM_CMD) $(BUILD_DIR)/final-project$(TARGET_EXT) 2>/dev/null || true
+	@$(RM_CMD) $(BUILD_DIR)/shaders 2>/dev/null || true
 	@echo "Clean completed!"
 
 # Полная очистка включая директорию сборки
 clean-all:
 	@echo "Cleaning all build files..."
-	@if exist "$(BUILD_DIR)" rmdir /s /q "$(BUILD_DIR)"
+	@$(RM_CMD) $(BUILD_DIR) 2>/dev/null || true
 	@echo "Full clean completed!"
 
 # Сборка с помощью CMake (рекомендуется)

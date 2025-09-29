@@ -212,13 +212,13 @@ void processInput(GLFWwindow *window)
 }
 
 // Колбэк для изменения размера окна
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void framebuffer_size_callback([[maybe_unused]] GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
 // Колбэк для обработки движения мыши
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+void mouse_callback([[maybe_unused]] GLFWwindow* window, double xposIn, double yposIn)
 {
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
@@ -240,7 +240,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 }
 
 // Колбэк для обработки колеса мыши
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+void scroll_callback([[maybe_unused]] GLFWwindow* window, [[maybe_unused]] double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
