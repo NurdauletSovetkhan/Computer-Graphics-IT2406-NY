@@ -66,6 +66,13 @@ int main()
     spheres.push_back(Sphere(glm::vec3(1.5f, 0.0f, 0.0f), 1.2f, glm::vec3(-0.3f, 0.2f, 0.0f)));
     spheres.push_back(Sphere(glm::vec3(0.0f, 2.0f, 0.0f), 0.8f, glm::vec3(0.0f, -0.4f, 0.3f)));
     
+//     struct Sphere {
+//     glm::vec3 position;   // Где находится
+//     float radius;         // Размер
+//     glm::vec3 velocity;   // Куда движется 
+//     glm::vec3 color;      // Цвет 
+// };
+
     std::cout << "Создано сфер: " << spheres.size() << std::endl;
 
     std::vector<glm::vec3> gridPoints = MarchingCubes::generateGridPoints(GRID_SIZE, GRID_RESOLUTION);
@@ -127,7 +134,7 @@ int main()
         marchingCubesShader.setFloat("isoLevel", ISO_LEVEL);
         
         marchingCubesShader.setInt("numSpheres", static_cast<int>(spheres.size()));
-        for (size_t i = 0; i < spheres.size() && i < 5; ++i)
+        for (size_t i = 0; i < spheres.size() && i < 5; ++i) // i < 5 - max 5 сфер
         {
             std::string spherePosName = "spherePositions[" + std::to_string(i) + "]";
             std::string sphereRadName = "sphereRadii[" + std::to_string(i) + "]";
