@@ -36,6 +36,7 @@ void Camera::ProcessKeyboard(int direction, float deltaTime)
         Position -= Up * velocity;
 }
 
+
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch)
 {
     xoffset *= MouseSensitivity;

@@ -63,9 +63,9 @@ The project is written in **C++** with **Modern OpenGL (Core Profile)** being em
 Below libraries and frameworks are utilized:
 - **GLFW** – to create windows, handle input, and OpenGL context.
 - **GLAD** – to load OpenGL function pointers.
-- **GLSL** – to write vertex, geometry, and fragment shaders.
 - **CMake / Make** – to build the project (optional).
 - **Git** – for version control.
+- **GLM** – math library (matrices etc.).
 
 These libraries were chosen for their efficiency, cross-platform, and use on real-time 3D graphics.
 
