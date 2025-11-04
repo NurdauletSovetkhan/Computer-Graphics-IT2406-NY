@@ -4,7 +4,6 @@
 #include <sstream>
 #include <glad/glad.h>
 
-// Camera implementation
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch) 
     : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(2.5f), MouseSensitivity(0.1f), Zoom(45.0f)
 {
@@ -77,7 +76,6 @@ void Camera::updateCameraVectors()
     Up = glm::normalize(glm::cross(Right, Front));
 }
 
-// Shader implementation
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
 {
     std::string vertexCode = readFile(vertexPath);
@@ -88,19 +86,16 @@ Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
     
     unsigned int vertex, fragment;
     
-    // Vertex shader
     vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vShaderCode, NULL);
     glCompileShader(vertex);
     checkCompileErrors(vertex, "VERTEX");
     
-    // Fragment shader
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fShaderCode, NULL);
     glCompileShader(fragment);
     checkCompileErrors(fragment, "FRAGMENT");
     
-    // Shader program
     ID = glCreateProgram();
     glAttachShader(ID, vertex);
     glAttachShader(ID, fragment);
@@ -123,25 +118,21 @@ Shader::Shader(const std::string& vertexPath, const std::string& geometryPath, c
     
     unsigned int vertex, geometry, fragment;
     
-    // Vertex shader
     vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vShaderCode, NULL);
     glCompileShader(vertex);
     checkCompileErrors(vertex, "VERTEX");
     
-    // Geometry shader
     geometry = glCreateShader(GL_GEOMETRY_SHADER);
     glShaderSource(geometry, 1, &gShaderCode, NULL);
     glCompileShader(geometry);
     checkCompileErrors(geometry, "GEOMETRY");
     
-    // Fragment shader
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fShaderCode, NULL);
     glCompileShader(fragment);
     checkCompileErrors(fragment, "FRAGMENT");
     
-    // Shader program
     ID = glCreateProgram();
     glAttachShader(ID, vertex);
     glAttachShader(ID, geometry);
@@ -230,7 +221,6 @@ std::string Shader::readFile(const std::string& filePath)
     return content;
 }
 
-// Marching Cubes utility functions
 namespace MarchingCubes {
     
     std::vector<glm::vec3> generateGridPoints(float gridSize, int resolution)
@@ -267,13 +257,13 @@ namespace MarchingCubes {
             glm::vec3 diff = position - sphere.position;
             float dist = glm::length(diff);
             
-            if (dist > 0.0001f) // Avoid division by zero
+            if (dist > 0.0001f)
             {
                 value += sphere.radius * sphere.radius / (dist * dist);
             }
             else
             {
-                return 1000.0f; // Very high value for points at sphere center
+                return 1000.0f;
             }
         }
         
