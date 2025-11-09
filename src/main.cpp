@@ -24,8 +24,12 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// FPS counter variables
+int frameCount = 0;
+float fpsTimer = 0.0f;
+
 const float GRID_SIZE = 8.0f;
-const int GRID_RESOLUTION = 32;
+const int GRID_RESOLUTION = 20; 
 const float ISO_LEVEL = 1.0f;
 
 int main()
@@ -65,6 +69,9 @@ int main()
     spheres.push_back(Sphere(glm::vec3(-1.5f, 0.0f, 0.0f), 1.0f, glm::vec3(0.5f, 0.0f, 0.0f)));
     spheres.push_back(Sphere(glm::vec3(1.5f, 0.0f, 0.0f), 1.2f, glm::vec3(-0.3f, 0.2f, 0.0f)));
     spheres.push_back(Sphere(glm::vec3(0.0f, 2.0f, 0.0f), 0.8f, glm::vec3(0.0f, -0.4f, 0.3f)));
+    spheres.push_back(Sphere(glm::vec3(0.0f, -1.5f, 0.0f), 0.9f, glm::vec3(0.3f, 0.3f, 0.0f)));
+    spheres.push_back(Sphere(glm::vec3(-2.0f, -1.0f, 0.0f), 0.7f, glm::vec3(0.2f, -0.3f, 0.4f)));
+    spheres.push_back(Sphere(glm::vec3(2.0f, 1.0f, 0.0f), 1.1f, glm::vec3(-0.4f, 0.1f, -0.2f)));
     
 //     struct Sphere {
 //     glm::vec3 position;   // Где находится
@@ -98,6 +105,19 @@ int main()
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // FPS counter
+        frameCount++;
+        fpsTimer += deltaTime;
+        if (fpsTimer >= 1.0f)
+        {
+            float fps = frameCount / fpsTimer;
+            // std::cout << "FPS: " << static_cast<int>(fps) << std::endl;
+            std::string title = "Spheres Merging Visualization | FPS: " + std::to_string(static_cast<int>(fps));
+            glfwSetWindowTitle(window, title.c_str());
+            frameCount = 0;
+            fpsTimer = 0.0f;
+        }
 
         processInput(window);
         
@@ -134,7 +154,7 @@ int main()
         marchingCubesShader.setFloat("isoLevel", ISO_LEVEL);
         
         marchingCubesShader.setInt("numSpheres", static_cast<int>(spheres.size()));
-        for (size_t i = 0; i < spheres.size() && i < 5; ++i) // i < 5 - max 5 сфер
+        for (size_t i = 0; i < spheres.size() && i < 6; ++i) // i < 6 - max 6 сфер
         {
             std::string spherePosName = "spherePositions[" + std::to_string(i) + "]";
             std::string sphereRadName = "sphereRadii[" + std::to_string(i) + "]";

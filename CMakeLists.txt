@@ -3,14 +3,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(final-project C CXX)
 
-# Установка стандартов C++: чисто и современно
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Настройка Вывода (Сразу куда надо) ---
-# Настраиваем директории вывода для всех целей в проекте. 
-# CMake будет использовать CMAKE_BUILD_TYPE (Debug/Release) автоматически.
-# Результат будет в: build/Debug/final-project.exe
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release")

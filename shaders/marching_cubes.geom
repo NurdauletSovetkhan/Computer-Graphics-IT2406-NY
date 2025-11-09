@@ -15,9 +15,9 @@ out vec3 Color;
 uniform mat4 view;
 uniform mat4 projection;
 
-// Sphere data (up to 5 spheres)
-uniform vec3 spherePositions[5];
-uniform float sphereRadii[5];
+// Sphere data (up to 6 spheres)
+uniform vec3 spherePositions[6];
+uniform float sphereRadii[6];
 uniform int numSpheres;
 uniform float isoLevel;
 

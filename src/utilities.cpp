@@ -64,7 +64,7 @@ void Camera::ProcessMouseScroll(float yoffset)
     if (Zoom > 45.0f)
         Zoom = 45.0f;
 }
-
+// 
 void Camera::updateCameraVectors()
 {
     glm::vec3 front;
